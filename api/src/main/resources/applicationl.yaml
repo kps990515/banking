@@ -5,6 +5,7 @@ spring:
     name: banking-api
 
   jpa:
+    open-in-view: false
     show-sql: true
     properties:
       hibernate:
