@@ -1,0 +1,113 @@
+version: '3.8'
+
+services:
+  app-service:
+    image: app-service:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      RYAN_BANK: http://ryan-bank:8081
+      CHUNSIK_BANK: http://chunsik-bank:8082
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/banking
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root1234!!
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - banking-network
+
+  ryan-bank:
+    image: ryan-bank:latest
+    depends_on:
+      mysql:
+        condition: service_healthy
+    build:
+      context: ./mock
+      dockerfile: ryan-bank/Dockerfile
+    ports:
+      - "8081:8081"
+    environment:
+      SERVER_PORT: 8081
+      SPRING_APPLICATION_NAME: ryan-bank
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/banking?useSSL=false&useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root1234!!
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8081/actuator/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - banking-network
+
+  chunsik-bank:
+    image: chunsik-bank:latest
+    depends_on:
+      mysql:
+        condition: service_healthy
+    build:
+      context: ./mock
+      dockerfile: chunsik-bank/Dockerfile
+    ports:
+      - "8082:8082"
+    environment:
+      SERVER_PORT: 8082
+      SPRING_APPLICATION_NAME: chunsik-bank
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/banking?useSSL=false&useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root1234!!
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8082/actuator/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - banking-network
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root1234!!
+      MYSQL_DATABASE: banking
+      MYSQL_PASSWORD: root1234!!
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "127.0.0.1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - banking-network
+
+  redis:
+    image: redis:7.2
+    container_name: redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-h", "127.0.0.1", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - banking-network
+
+volumes:
+  mysql_data:
+
+networks:
+  banking-network:

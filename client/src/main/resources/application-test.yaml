@@ -1,0 +1,42 @@
+server:
+  port: 8081 # Mock 서버 전체가 사용하는 포트
+
+spring:
+  application:
+    name: mock-banking-api
+
+mock:
+  banks:
+    ryan:
+      base-path: /ryan-bank/api # 라이언뱅크의 경로
+    chunsik:
+      base-path: /chunsik-bank/api # 춘식뱅크의 경로
+
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 10000 # 연결 타임아웃 (밀리초)
+        readTimeout: 10000    # 읽기 타임아웃 (밀리초)
+
+client:
+  bank:
+    ryan: http://localhost:8081/ryan-bank # 라이언뱅크의 경로
+    chunsik: http://localhost:8081/chunsik-bank # 춘식뱅크의 경로
+
+
+resilience4j.circuitbreaker:
+  instances:
+    ryan-banking-api:
+      register-health-indicator: true
+      sliding-window-type: COUNT_BASED
+      sliding-window-size: 10
+      failure-rate-threshold: 50
+      wait-duration-in-open-state: 30s
+
+    chunsik-banking-api:
+      register-health-indicator: true
+      sliding-window-type: COUNT_BASED
+      sliding-window-size: 10
+      failure-rate-threshold: 50
+      wait-duration-in-open-state: 30s
